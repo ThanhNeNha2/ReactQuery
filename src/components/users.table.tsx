@@ -7,6 +7,7 @@ import UserDeleteModal from "./modal/user.delete.modal";
 import UsersPagination from "./pagination/users.pagination";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Popover from "react-bootstrap/Popover";
+import { useQuery } from "@tanstack/react-query";
 
 function UsersTable() {
   const [isOpenCreateModal, setIsOpenCreateModal] = useState<boolean>(false);
@@ -16,23 +17,32 @@ function UsersTable() {
 
   const [isOpenDeleteModal, setIsOpenDeleteModal] = useState<boolean>(false);
 
-  const users = [
-    {
-      id: 1,
-      name: "Eric",
-      email: "eric@gmail.com",
-    },
-    {
-      id: 2,
-      name: "hihi",
-      email: "hoidanit@gmail.com",
-    },
-    {
-      id: 3,
-      name: "hihi",
-      email: "admin@gmail.com",
-    },
-  ];
+  // const users = [
+  //   {
+  //     id: 1,
+  //     name: "Eric",
+  //     email: "eric@gmail.com",
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "hihi",
+  //     email: "hoidanit@gmail.com",
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "hihi",
+  //     email: "admin@gmail.com",
+  //   },
+  // ];
+
+  const { isPending, error, data } = useQuery({
+    queryKey: ["fetchData"],
+    queryFn: () =>
+      fetch("http://localhost:8000/users").then((res) => res.json()),
+    staleTime: 3000,
+  });
+  if (isPending) return "Loading...";
+  if (error) return "An error has occurred: " + error.message;
 
   const handleEditUser = (user: any) => {
     setDataUser(user);
@@ -46,15 +56,28 @@ function UsersTable() {
 
   const PopoverComponent = forwardRef((props: any, ref: any) => {
     const { id } = props;
+    const { isPending, error, data } = useQuery({
+      queryKey: ["hihi", id],
+      queryFn: () =>
+        fetch(`http://localhost:8000/users/${id}`).then((res) => res.json()),
+    });
 
+    const getInfo = () => {
+      if (isPending) return "Loading...";
+      if (data)
+        return (
+          <>
+            <div>ID = {id}</div>
+            <div>Name = {data.name}</div>
+            <div>Email = {data.email}</div>
+          </>
+        );
+      if (error) return "An error has occurred: " + error.message;
+    };
     return (
       <Popover ref={ref} {...props}>
         <Popover.Header as="h3">Detail User</Popover.Header>
-        <Popover.Body>
-          <div>ID = {id}</div>
-          <div>Name = ?</div>
-          <div>Email = ?</div>
-        </Popover.Body>
+        <Popover.Body>{getInfo()}</Popover.Body>
       </Popover>
     );
   });
@@ -83,7 +106,7 @@ function UsersTable() {
           </tr>
         </thead>
         <tbody>
-          {users?.map((user) => {
+          {data?.map((user: any) => {
             return (
               <tr key={user.id}>
                 <OverlayTrigger
