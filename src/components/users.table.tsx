@@ -1,5 +1,5 @@
 import Table from "react-bootstrap/Table";
-import { useState, forwardRef } from "react";
+import { useState, forwardRef, useEffect } from "react";
 import Button from "react-bootstrap/Button";
 import UserCreateModal from "./modal/user.create.modal";
 import UserEditModal from "./modal/user.edit.modal";
@@ -7,32 +7,32 @@ import UserDeleteModal from "./modal/user.delete.modal";
 import UsersPagination from "./pagination/users.pagination";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Popover from "react-bootstrap/Popover";
+import { useQuery } from "@tanstack/react-query";
 
 function UsersTable() {
   const [isOpenCreateModal, setIsOpenCreateModal] = useState<boolean>(false);
-
   const [isOpenUpdateModal, setIsOpenUpdateModal] = useState<boolean>(false);
   const [dataUser, setDataUser] = useState({});
-
   const [isOpenDeleteModal, setIsOpenDeleteModal] = useState<boolean>(false);
 
-  const users = [
-    {
-      id: 1,
-      name: "Eric",
-      email: "eric@gmail.com",
-    },
-    {
-      id: 2,
-      name: "hihi",
-      email: "hoidanit@gmail.com",
-    },
-    {
-      id: 3,
-      name: "hihi",
-      email: "admin@gmail.com",
-    },
-  ];
+  // phan trang
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPage, setTotalPage] = useState<number>(0);
+
+  const { isPending, error, data } = useQuery({
+    queryKey: ["repoData", currentPage],
+    queryFn: () =>
+      fetch(`http://localhost:8000/users?_page=${currentPage}&_limit=2`).then(
+        (res) => {
+          console.log(res.headers.get("X-Total-Count"));
+          return res.json();
+        }
+      ),
+    // staleTime: 3000,
+  });
+
+  if (isPending) return "Loading...";
+  if (error) return "An error has occurred: " + error.message;
 
   const handleEditUser = (user: any) => {
     setDataUser(user);
@@ -47,14 +47,28 @@ function UsersTable() {
   const PopoverComponent = forwardRef((props: any, ref: any) => {
     const { id } = props;
 
+    const { isPending, error, data } = useQuery({
+      queryKey: ["repoData", id],
+      queryFn: () =>
+        fetch(`http://localhost:8000/users/${id}`).then((res) => res.json()),
+    });
+    const getUser = () => {
+      if (isPending) return "Loading...";
+      if (data)
+        return (
+          <>
+            <div>ID = {id}</div>
+            <div>Name = {data.name}</div>
+            <div>Email = {data.email}</div>
+          </>
+        );
+    };
+    if (error) return "An error has occurred: " + error.message;
+
     return (
       <Popover ref={ref} {...props}>
         <Popover.Header as="h3">Detail User</Popover.Header>
-        <Popover.Body>
-          <div>ID = {id}</div>
-          <div>Name = ?</div>
-          <div>Email = ?</div>
-        </Popover.Body>
+        <Popover.Body>{getUser()}</Popover.Body>
       </Popover>
     );
   });
@@ -83,7 +97,7 @@ function UsersTable() {
           </tr>
         </thead>
         <tbody>
-          {users?.map((user) => {
+          {data?.map((user: any) => {
             return (
               <tr key={user.id}>
                 <OverlayTrigger
@@ -116,7 +130,11 @@ function UsersTable() {
           })}
         </tbody>
       </Table>
-      <UsersPagination totalPages={0} />
+      <UsersPagination
+        totalPages={5}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+      />
       <UserCreateModal
         isOpenCreateModal={isOpenCreateModal}
         setIsOpenCreateModal={setIsOpenCreateModal}
