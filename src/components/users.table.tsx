@@ -8,6 +8,7 @@ import UsersPagination from "./pagination/users.pagination";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Popover from "react-bootstrap/Popover";
 import { useQuery } from "@tanstack/react-query";
+import { userFetchUser } from "./Config/api";
 
 function UsersTable() {
   const [isOpenCreateModal, setIsOpenCreateModal] = useState<boolean>(false);
@@ -17,29 +18,9 @@ function UsersTable() {
 
   // phan trang
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPage, setTotalPage] = useState<number>(1);
 
-  const LIMIT = 5;
-  const { isPending, error, data } = useQuery({
-    queryKey: ["repoData", currentPage],
-    queryFn: () =>
-      fetch(
-        `http://localhost:8000/users?_page=${currentPage}&_limit=${LIMIT}`
-      ).then((res) => {
-        let total_user = +(res.headers?.get("X-Total-Count") ?? 0);
-        const limit = LIMIT;
-        //  7/5
-        const totalPa = total_user == 0 ? 0 : Math.ceil(total_user / limit);
-        setTotalPage(totalPa);
-        return res.json();
-      }),
-    // staleTime: 3000,
-  });
-
-  if (isPending) return "Loading...";
-  if (error) return "An error has occurred: " + error.message;
-  console.log(totalPage);
-
+  const { isPending, data, total_pages } = userFetchUser(currentPage);
+  if (isPending) return "Loading ......";
   const handleEditUser = (user: any) => {
     setDataUser(user);
     setIsOpenUpdateModal(true);
@@ -137,7 +118,7 @@ function UsersTable() {
         </tbody>
       </Table>
       <UsersPagination
-        totalPages={totalPage}
+        totalPages={total_pages}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
       />
